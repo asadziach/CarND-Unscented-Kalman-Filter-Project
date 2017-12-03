@@ -54,6 +54,47 @@ UKF::UKF() {
 
 	 Hint: one or more values initialized above might be wildly off...
 	 */
+	time_us_ = 0;
+
+	//set state dimension
+	n_x_ = 5;
+
+	//set augmented dimension
+	n_aug_ = 7;
+
+	// TODO Process noise standard deviation longitudinal acceleration in m/s^2
+	std_a_ = 0.2;
+
+	//TODO Process noise standard deviation yaw acceleration in rad/s^2
+	std_yawdd_ = 0.2;
+
+	//define spreading parameter
+	lambda_ = 3 - n_aug_;
+
+	//x_aug_ = VectorXd(n_aug_);
+
+	//P_aug_ = MatrixXd(n_aug_, n_aug_);
+
+	int sig_pt_count = 2 * n_aug_ + 1;
+
+	//create sigma point matrix
+	//Xsig_aug_ = MatrixXd(n_aug_, sig_pt_count);
+
+	//create matrix with predicted sigma points as columns
+	Xsig_pred_ = MatrixXd(n_x_, sig_pt_count);
+
+	//create vector for weights
+	weights_ = VectorXd(sig_pt_count);
+
+	//set weights
+	double weight_0 = lambda_ / (lambda_ + n_aug_);
+	weights_(0) = weight_0;
+	for (int i = 1; i < sig_pt_count; i++) {  //2n+1 weights
+		double weight = 0.5 / (n_aug_ + lambda_);
+		weights_(i) = weight;
+	}
+
+	is_initialized_ = false;
 }
 
 UKF::~UKF() {

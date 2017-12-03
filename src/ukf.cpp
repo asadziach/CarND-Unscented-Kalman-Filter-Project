@@ -111,6 +111,108 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	 Complete this function! Make sure you switch between lidar and radar
 	 measurements.
 	 */
+	if (!is_initialized_) {
+		/**
+		 * Initialize the state ekf_.x_ with the first measurement.
+		 * Create the covariance matrix.
+		 */
+
+		//state covariance matrix P
+
+		P_   <<   1,  0,  0,  0,  0,
+		          0,  1,  0,  0,  0,
+		          0,  0,  1,  0,  0,
+		          0,  0,  0,  1,  0,
+		          0,  0,  0,  0,  1;
+
+		x_.fill(0.0);
+
+		float px,py;
+
+		if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+			/**
+			 Convert radar from polar to cartesian coordinates and initialize state.
+			 */
+			// Range - Radial distance from origin
+			float rho = meas_package.raw_measurements_[0];
+			// Bearing - angle between rho and x
+			float phi = meas_package.raw_measurements_[1];
+			// Radial Velocity - change of rho - range rate
+			float rho_dot = meas_package.raw_measurements_[2];
+
+			px = rho * cos(phi);
+			py = rho * sin(phi);
+			/*  although radar does include velocity information, the radar velocity
+			 * and the CTRV velocity are not the same.
+			 * */
+
+
+		} else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+			/**
+			 Initialize state.
+			 */
+			px = meas_package.raw_measurements_[0];
+			py = meas_package.raw_measurements_[1];
+
+		}
+		if (fabs(px) < 0.0001) {
+			px = 0.01;
+			cout << "initial px too small, clamping" << endl;
+		}
+
+		if (fabs(py) < 0.0001) {
+			py = 0.01;
+			cout << "initial py too small, clamping" << endl;
+		}
+
+		x_ << px, py, 0, 0, 0;
+
+		time_us_ = meas_package.timestamp_;
+		// done initializing, no need to predict or update
+		is_initialized_ = true;
+		return;
+
+	}
+
+	/*****************************************************************************
+	 *  Prediction
+	 ****************************************************************************/
+	//compute the time elapsed between the current and previous measurements. dt - expressed in seconds
+	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
+	time_us_ = meas_package.timestamp_;
+	int sig_pt_count = 2 * n_aug_ + 1;
+
+	//TOOD move up
+	VectorXd x_aug_ = VectorXd(n_aug_);
+	MatrixXd P_aug_ = MatrixXd(n_aug_, n_aug_);
+	MatrixXd Xsig_aug_ = MatrixXd(n_aug_, sig_pt_count);
+
+	//create augmented mean state
+	x_aug_.head(n_x_) = x_;
+	x_aug_ (n_x_) = 0;
+	x_aug_(n_x_ + 1) = 0;
+
+	//create augmented covariance matrix
+	P_aug_.setZero();
+	P_aug_.topLeftCorner(n_x_, n_x_) = P_;
+	P_aug_(n_x_, n_x_) = std_a_ * std_a_;
+	P_aug_(n_x_ + 1, n_x_ + 1) = std_yawdd_ * std_yawdd_;
+
+	//create square root matrix
+	MatrixXd A = P_aug_.llt().matrixL();
+
+	//create augmented sigma points
+	Xsig_aug_.col(0) = x_aug_;
+
+	float m_const = sqrt(lambda_ + n_aug_);
+	for (int i = 0; i < n_aug_; i++) {
+		int k = i + 1;
+		Xsig_aug_.col(k) = x_aug_ + m_const * A.col(i);
+		Xsig_aug_.col(k + n_aug_) = x_aug_ - m_const * A.col(i);
+	}
+
+	Prediction(dt);
+
 }
 
 /**

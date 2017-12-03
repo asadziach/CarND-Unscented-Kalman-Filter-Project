@@ -290,15 +290,15 @@ void UKF::Prediction(double delta_t) {
 		float angle = x_diff(3);
 
 		//angle normalization
-		/*
+
 		while (angle > M_PI)
 			angle -= 2. * M_PI;
 		while (angle < -M_PI)
 			angle += 2. * M_PI;
 
 		x_diff(3) = angle;
-		*/
-		x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
+
+		//x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
 
 		P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
 	}

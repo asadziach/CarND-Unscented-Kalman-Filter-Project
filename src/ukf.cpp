@@ -180,6 +180,25 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	//compute the time elapsed between the current and previous measurements. dt - expressed in seconds
 	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
 	time_us_ = meas_package.timestamp_;
+
+
+	Prediction(dt);
+
+}
+
+/**
+ * Predicts sigma points, the state, and the state covariance matrix.
+ * @param {double} delta_t the change in time (in seconds) between the last
+ * measurement and this one.
+ */
+void UKF::Prediction(double delta_t) {
+	/**
+	 TODO:
+
+	 Complete this function! Estimate the object's location. Modify the state
+	 vector, x_. Predict sigma points, the state, and the state covariance matrix.
+	 */
+
 	int sig_pt_count = 2 * n_aug_ + 1;
 
 	//TOOD move up
@@ -211,22 +230,78 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 		Xsig_aug_.col(k + n_aug_) = x_aug_ - m_const * A.col(i);
 	}
 
-	Prediction(dt);
+	//predict sigma points
+	for (int i = 0; i < sig_pt_count; i++) {
+		//extract values for better readability
+		double p_x = Xsig_aug_(0, i);
+		double p_y = Xsig_aug_(1, i);
+		double v = Xsig_aug_(2, i);
+		double yaw = Xsig_aug_(3, i);
+		double yawd = Xsig_aug_(4, i);
+		double nu_a = Xsig_aug_(5, i);
+		double nu_yawdd = Xsig_aug_(6, i);
 
-}
+		//predicted state values
+		double px_p, py_p;
 
-/**
- * Predicts sigma points, the state, and the state covariance matrix.
- * @param {double} delta_t the change in time (in seconds) between the last
- * measurement and this one.
- */
-void UKF::Prediction(double delta_t) {
-	/**
-	 TODO:
+		//avoid division by zero
+		if (fabs(yawd) > 0.001) {
+			px_p = p_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
+			py_p = p_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
+		} else {
+			px_p = p_x + v * delta_t * cos(yaw);
+			py_p = p_y + v * delta_t * sin(yaw);
+		}
 
-	 Complete this function! Estimate the object's location. Modify the state
-	 vector, x_. Predict sigma points, the state, and the state covariance matrix.
-	 */
+		double v_p = v;
+		double yaw_p = yaw + yawd * delta_t;
+		double yawd_p = yawd;
+
+		//add noise
+		px_p = px_p + 0.5 * nu_a * delta_t * delta_t * cos(yaw);
+		py_p = py_p + 0.5 * nu_a * delta_t * delta_t * sin(yaw);
+		v_p = v_p + nu_a * delta_t;
+
+		yaw_p = yaw_p + 0.5 * nu_yawdd * delta_t * delta_t;
+		yawd_p = yawd_p + nu_yawdd * delta_t;
+
+		//write predicted sigma point into right column
+		Xsig_pred_(0, i) = px_p;
+		Xsig_pred_(1, i) = py_p;
+		Xsig_pred_(2, i) = v_p;
+		Xsig_pred_(3, i) = yaw_p;
+		Xsig_pred_(4, i) = yawd_p;
+	}
+
+	//Update sate
+
+	//predict state mean
+	x_.fill(0.0);
+	for (int i = 0; i < sig_pt_count; i++) {  //iterate over sigma points
+		x_ = x_ + weights_(i) * Xsig_pred_.col(i);
+	}
+	//predict state covariance matrix
+	P_.fill(0.0);
+	for (int i = 0; i < sig_pt_count; i++) {  //iterate over sigma points
+
+		// state difference
+		VectorXd x_diff = Xsig_pred_.col(i) - x_;
+
+		float angle = x_diff(3);
+
+		//angle normalization
+		/*
+		while (angle > M_PI)
+			angle -= 2. * M_PI;
+		while (angle < -M_PI)
+			angle += 2. * M_PI;
+
+		x_diff(3) = angle;
+		*/
+		x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
+
+		P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
+	}
 }
 
 /**

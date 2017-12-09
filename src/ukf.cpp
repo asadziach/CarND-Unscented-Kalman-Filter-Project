@@ -354,6 +354,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 	long x_size = x_.size();
 	MatrixXd I = MatrixXd::Identity(x_size, x_size);
 	P_ = (I - K * H_) * P_;
+
+	//Calculate Normalized Innovations Squared for LASAR
+	float nis = y.transpose() * S.inverse() * y;
 }
 
 /**
@@ -483,5 +486,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	//update state mean and covariance matrix
 	x_ = x_ + K * z_diff;
 	P_ = P_ - K * S * K.transpose();
+
+	//Calculate Normalized Innovations Squared for RADAR
+	float nis = z_diff.transpose() * S.inverse() * z_diff;
 }
 

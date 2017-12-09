@@ -47,13 +47,6 @@ UKF::UKF() {
 
 	// Parameters above this line are scaffolding, do not modify
 
-	/**
-	 TODO:
-
-	 Complete the initialization. See ukf.h for other member properties.
-
-	 Hint: one or more values initialized above might be wildly off...
-	 */
 	time_us_ = 0;
 
 	//set state dimension
@@ -105,12 +98,7 @@ UKF::~UKF() {
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-	/**
-	 TODO:
 
-	 Complete this function! Make sure you switch between lidar and radar
-	 measurements.
-	 */
 	if (!is_initialized_) {
 		/**
 		 * Initialize the state ekf_.x_ with the first measurement.
@@ -202,10 +190,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	 * Update the state and covariance matrices.
 	 */
 
-	if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+	if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
 		// Radar updates
 		UpdateRadar(meas_package);
-	} else {
+	} else if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_){
 		// Laser updates
 		UpdateLidar(meas_package);
 	}
@@ -218,15 +206,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  */
 void UKF::Prediction(double delta_t) {
 	/**
-	 TODO:
-
-	 Complete this function! Estimate the object's location. Modify the state
-	 vector, x_. Predict sigma points, the state, and the state covariance matrix.
+	 Estimate the object's location. Modify the state vector, x_.
+	 Predict sigma points, the state, and the state covariance matrix.
 	 */
 
 	int sig_pt_count = 2 * n_aug_ + 1;
 
-	//TOOD try moving up
+	//TODO try moving up
 	VectorXd x_aug_ = VectorXd(n_aug_);
 	MatrixXd P_aug_ = MatrixXd(n_aug_, n_aug_);
 	MatrixXd Xsig_aug_ = MatrixXd(n_aug_, sig_pt_count);
@@ -335,12 +321,9 @@ void UKF::Prediction(double delta_t) {
  */
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
 	/**
-	 TODO:
-
-	 Complete this function! Use lidar data to update the belief about the object's
+	 Use lidar data to update the belief about the object's
 	 position. Modify the state vector, x_, and covariance, P_.
-
-	 You'll also need to calculate the lidar NIS.
+	 Finally calculate the lidar NIS.
 	 */
 	MatrixXd H_ = MatrixXd(2, 5);
 
@@ -379,12 +362,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  */
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	/**
-	 TODO:
-
-	 Complete this function! Use radar data to update the belief about the object's
+	 Use radar data to update the belief about the object's
 	 position. Modify the state vector, x_, and covariance, P_.
 
-	 You'll also need to calculate the radar NIS.
+	 Finally calculate the radar NIS.
 	 */
 
 	  //set measurement dimension, radar can measure r, phi, and r_dot
@@ -418,8 +399,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		double v2 = sin(yaw) * v;
 
 		// measurement model
-		Zsig(0, i) = sqrt(p_x * p_x + p_y * p_y);                        //r
-		Zsig(1, i) = atan2(p_y, p_x);                                 //phi
+		Zsig(0, i) = sqrt(p_x * p_x + p_y * p_y);                         //r
+		Zsig(1, i) = atan2(p_y, p_x);                                     //phi
 		Zsig(2, i) = (p_x * v1 + p_y * v2) / sqrt(p_x * p_x + p_y * p_y); //r_dot
 	}
 
@@ -438,10 +419,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		VectorXd z_diff = Zsig.col(i) - z_pred;
 
 		//angle normalization
-		while (z_diff(1) > M_PI)
-			z_diff(1) -= 2. * M_PI;
-		while (z_diff(1) < -M_PI)
-			z_diff(1) += 2. * M_PI;
+		while (z_diff(1) > M_PI) z_diff(1) -= 2.*M_PI;
+		while (z_diff(1) < -M_PI) z_diff(1) += 2.*M_PI;
 
 		S = S + weights(i) * z_diff * z_diff.transpose();
 	}
@@ -479,18 +458,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		while (z_diff(1) < -M_PI)
 			z_diff(1) += 2. * M_PI;
 
-		//z_diff(1) = atan2(sin(z_diff(1)), cos(z_diff(1)));
-
 		// state difference
 		VectorXd x_diff = Xsig_pred_.col(i) - x_;
+
 		//angle normalization
-
-		while (x_diff(3) > M_PI)
-			x_diff(3) -= 2. * M_PI;
-		while (x_diff(3) < -M_PI)
-			x_diff(3) += 2. * M_PI;
-
-		//x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
+		while (x_diff(3) > M_PI) x_diff(3) -= 2.*M_PI;
+		while (x_diff(3) < -M_PI) x_diff(3) += 2.*M_PI;
 
 		Tc = Tc + weights(i) * x_diff * z_diff.transpose();
 	}

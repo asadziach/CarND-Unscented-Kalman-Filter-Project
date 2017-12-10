@@ -64,14 +64,7 @@ UKF::UKF() {
 	//define spreading parameter
 	lambda_ = 3 - n_aug_;
 
-	//x_aug_ = VectorXd(n_aug_);
-
-	//P_aug_ = MatrixXd(n_aug_, n_aug_);
-
 	int sig_pt_count = 2 * n_aug_ + 1;
-
-	//create sigma point matrix
-	//Xsig_aug_ = MatrixXd(n_aug_, sig_pt_count);
 
 	//create matrix with predicted sigma points as columns
 	Xsig_pred_ = MatrixXd(n_x_, sig_pt_count);
@@ -179,7 +172,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
 	time_us_ = meas_package.timestamp_;
 
-
 	Prediction(dt);
 
 	/*****************************************************************************
@@ -212,7 +204,6 @@ void UKF::Prediction(double delta_t) {
 
 	int sig_pt_count = 2 * n_aug_ + 1;
 
-	//TODO try moving up
 	VectorXd x_aug_ = VectorXd(n_aug_);
 	MatrixXd P_aug_ = MatrixXd(n_aug_, n_aug_);
 	MatrixXd Xsig_aug_ = MatrixXd(n_aug_, sig_pt_count);
@@ -301,15 +292,8 @@ void UKF::Prediction(double delta_t) {
 		float angle = x_diff(3);
 
 		//angle normalization
-
-		while (angle > M_PI)
-			angle -= 2. * M_PI;
-		while (angle < -M_PI)
-			angle += 2. * M_PI;
-
-		x_diff(3) = angle;
-
-		//x_diff(3) = atan2(sin(x_diff(3)), cos(x_diff(3)));
+		while (x_diff(3) > M_PI)  x_diff(3) -= 2.*M_PI;
+		while (x_diff(3) < -M_PI) x_diff(3) += 2.*M_PI;
 
 		P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
 	}
@@ -371,7 +355,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 	 Finally calculate the radar NIS.
 	 */
 
-	  //set measurement dimension, radar can measure r, phi, and r_dot
+	//set measurement dimension, radar can measure r, phi, and r_dot
 	int n_z = 3;
 
 	//define spreading parameter
@@ -456,10 +440,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 		VectorXd z_diff = Zsig.col(i) - z_pred;
 		//angle normalization
 
-		while (z_diff(1) > M_PI)
-			z_diff(1) -= 2. * M_PI;
-		while (z_diff(1) < -M_PI)
-			z_diff(1) += 2. * M_PI;
+		while (z_diff(1) > M_PI)  z_diff(1) -= 2.*M_PI;
+		while (z_diff(1) < -M_PI) z_diff(1) += 2.*M_PI;
 
 		// state difference
 		VectorXd x_diff = Xsig_pred_.col(i) - x_;

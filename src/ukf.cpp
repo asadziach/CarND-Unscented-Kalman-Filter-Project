@@ -100,9 +100,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
 		float px,py;
 		float variance_px, variance_py;
-		float variance_v = pow(6.5, 2);
-		float varience_psi = pow(M_PI, 2);
-		float varience_psi_dot = pow(0.2, 2);
+		float variance_v = 1;
+		float varience_psi = 1;
+		float varience_psi_dot = 1;
 
 		P_.fill(0.0);
 		x_.fill(0.0);
@@ -189,6 +189,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 		// Laser updates
 		UpdateLidar(meas_package);
 	}
+
 }
 
 /**

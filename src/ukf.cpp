@@ -182,14 +182,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	 * Update the state and covariance matrices.
 	 */
 
+	float nis;
 	if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
 		// Radar updates
-		UpdateRadar(meas_package);
+		nis = UpdateRadar(meas_package);
 	} else if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_){
 		// Laser updates
-		UpdateLidar(meas_package);
+		nis = UpdateLidar(meas_package);
 	}
-
+    cout << nis << "\n";
 }
 
 /**
@@ -304,7 +305,7 @@ void UKF::Prediction(double delta_t) {
  * Updates the state and the state covariance matrix using a laser measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateLidar(MeasurementPackage meas_package) {
+float UKF::UpdateLidar(MeasurementPackage meas_package) {
 	/**
 	 Use lidar data to update the belief about the object's
 	 position. Modify the state vector, x_, and covariance, P_.
@@ -342,13 +343,14 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
 	//Calculate Normalized Innovations Squared for LASAR
 	float nis = y.transpose() * S.inverse() * y;
+	return nis;
 }
 
 /**
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateRadar(MeasurementPackage meas_package) {
+float UKF::UpdateRadar(MeasurementPackage meas_package) {
 	/**
 	 Use radar data to update the belief about the object's
 	 position. Modify the state vector, x_, and covariance, P_.
@@ -472,5 +474,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
 	//Calculate Normalized Innovations Squared for RADAR
 	float nis = z_diff.transpose() * S.inverse() * z_diff;
+	return nis;
 }
 

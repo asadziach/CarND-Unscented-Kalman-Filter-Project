@@ -46,7 +46,6 @@ UKF::UKF() {
 	std_radrd_ = 0.3;
 
 	// Parameters above this line are scaffolding, do not modify
-
 	time_us_ = 0;
 
 	//set state dimension
@@ -54,12 +53,6 @@ UKF::UKF() {
 
 	//set augmented dimension
 	n_aug_ = 7;
-
-	// TODO Process noise standard deviation longitudinal acceleration in m/s^2
-	std_a_ = 0.2;
-
-	//TODO Process noise standard deviation yaw acceleration in rad/s^2
-	std_yawdd_ = 0.2;
 
 	//define spreading parameter
 	lambda_ = 3 - n_aug_;
@@ -81,6 +74,7 @@ UKF::UKF() {
 	}
 
 	is_initialized_ = false;
+	print_enabled = false;
 }
 
 UKF::~UKF() {
@@ -172,6 +166,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	float dt = (meas_package.timestamp_ - time_us_) / 1000000.0;
 	time_us_ = meas_package.timestamp_;
 
+	/* when you apply Euler method for large steps, you are assuming that the derivative of the states
+	 * is constant over that whole interval, this leads to error in state propagation and this error
+	 * can add up to large values over many steps. So it's not right to integrate with large dt,
+	 * even for linear systems.
+	 * https://discussions.udacity.com/t/numerical-instability-of-the-implementation/230449/55
+	 * Not needed for this simulated data as dt is already small.
+	 */
 	Prediction(dt);
 
 	/*****************************************************************************
@@ -190,7 +191,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 		// Laser updates
 		nis = UpdateLidar(meas_package);
 	}
-    cout << nis << "\n";
+	if (print_enabled)
+        cout << nis << "\n";
 }
 
 /**
@@ -290,8 +292,6 @@ void UKF::Prediction(double delta_t) {
 
 		// state difference
 		VectorXd x_diff = Xsig_pred_.col(i) - x_;
-
-		float angle = x_diff(3);
 
 		//angle normalization
 		while (x_diff(3) > M_PI)  x_diff(3) -= 2.*M_PI;
@@ -463,10 +463,8 @@ float UKF::UpdateRadar(MeasurementPackage meas_package) {
 	VectorXd z_diff = z - z_pred;
 
 	//angle normalization
-	while (z_diff(1) > M_PI)
-		z_diff(1) -= 2. * M_PI;
-	while (z_diff(1) < -M_PI)
-		z_diff(1) += 2. * M_PI;
+	while (z_diff(1) > M_PI) z_diff(1) -= 2.*M_PI;
+	while (z_diff(1) < -M_PI) z_diff(1) += 2.*M_PI;
 
 	//update state mean and covariance matrix
 	x_ = x_ + K * z_diff;
